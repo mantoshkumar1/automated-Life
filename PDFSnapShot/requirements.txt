@@ -1,0 +1,3 @@
+poppler-utils; sys_platform == 'linux'
+pdf2image==1.16.0
+

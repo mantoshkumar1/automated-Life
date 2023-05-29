@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyz
+*.pyw
+*.pyz
+*.pyw
+*.egg-info/
+dist/
+build/
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Virtual Environment
+venv/
+.venv/
+

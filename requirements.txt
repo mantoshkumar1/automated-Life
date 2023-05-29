@@ -1,0 +1,5 @@
+# Requirements for PDFSnapShot application
+pdf2image==1.16.0
+poppler-utils; sys_platform == 'linux'
+
+
