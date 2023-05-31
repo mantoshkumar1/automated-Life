@@ -8,14 +8,15 @@
 ............
 ```
 The **PDF Snapshot** is a Python application that allows you to generate JPEG 
-snapshots of each page of a PDF file. 
+snapshots of each page of PDF files. 
 
-It iterates over all PDF files in a given directory, including nested subfolders, and 
-uses the `pdf2image` package to convert PDF pages to JPEG images.
+It can also iterate over all PDF files in given directories, including nested their 
+sub-folders, and uses the `pdf2image` package to convert PDF pages to JPEG images.
 
 **Notes:**
 1. Each generated JPEG image is named with the original PDF file name and the corresponding page number.
-2. The output directory, `pdf-snapshots`, is created automatically **within the input directory**.
+2. If user does not specify the destination directory path, then the output directory, `pdf-snapshots`, 
+is created automatically **within the source directory** of each PDF file.
 
 ## 2. How Does This Tool Work?
 The provided Python application iterates over all PDF files in a given directory and 
@@ -29,23 +30,23 @@ Once execution completes, this will be the final structure of each directory
 inside user-given input directories.
 ```
     input_directory
-    ├── pdf_file_1.pdf
-    ├── pdf_file_2.pdf
-    ├── pdf-snapshots
-    │   ├── pdf_file_1_page_1.jpg
-    │   ├── pdf_file_2_page_1.jpg
-    │   └── pdf_file_2_page_2.jpg
+    ├── pdf_file_1.pdf  <== Has one page only
+    ├── pdf_file_2.pdf  <== Has two pages
+    ├── pdf-snapshots   <== Default Destination Directory of Generated images
+    │   ├── pdf_file_1-page-1.jpg
+    │   ├── pdf_file_2-page-1.jpg
+    │   └── pdf_file_2-page-2.jpg
     ├── subdirectory
-    │   ├── subdirectory_pdf.pdf
-    │   └── pdf-snapshots
-    │       └── subdirectory_pdf_page_1.jpg
+    │   ├── subdirectory_pdf.pdf  <== Has one page only
+    │   └── pdf-snapshots         <== Default Destination Directory of Generated images
+    │       └── subdirectory_pdf-page-1.jpg
     └── ...
 ```
 
 By executing this application, you can conveniently generate a series of screenshots 
-that correspond to each page of the PDF files in the specified directory. This can be 
-useful for various purposes such as archiving, visual reference, or further analysis of 
-the PDF content.
+that correspond to each page of the PDF files that are either a PDF itself or reside 
+in the specified directories . This can be useful for various purposes such as 
+archiving, visual reference, or further analysis of the PDF content.
 
 
 ## 3. Prerequisites
@@ -96,31 +97,48 @@ Please note that if you are using a Linux system then this dependency is already
 taken care of if you have already used `requirements.txt` to install dependencies.
 
 ## 5. How To Use This Tool:
-### 5.1. If Only Need To Do The Task:
-Suppose you have the following directories where your PDF files are stores:
-* C:\Documents\Directory1
-* C:\Files\Directory2
-* D:\Projects\Directory3
+### 5.1. Explanation:
+Suppose you have the following directories where your PDF files are stored:
+```text
+C:
+└── Documents
+    ├── DOC_PDF1.pdf
+    ├── DOC_PDF2.pdf
+    └── DOC_PDF3.pdf
 
-To run the application and provide these directories as input separated by comma, open the command 
-prompt (CMD) or PowerShell, navigate to the directory where this code repository is 
-located, and execute the following command:
+D:
+└── Files
+    ├── File_PDF1.pdf
+    └── File_PDF2.pdf
+```
 
-`cd automated-Life`
+Now, suppose you want to use this tool on directory (C:\Document) on also on a specific 
+PDF file (D:\Files\File_PDF1.pdf). In this case, run this application with `--input-paths` 
+and provide the Directory and PDF file paths separated by comma.
+<br />
 
-`python PDFSnapShot/run.py --input_dirs "C:\Documents\Directory1,C:\Files\Directory2,D:\Projects\Directory3"`
+```python pdf_snapshot.py --input-paths "<path_to_pdfs>, <path_to_directories>" --dest-path "<path_to_destination_directory>"```
 
-### 5.2. If Need To Use This Tool Programmatically:
-1. Place your PDF files in a directory. 
-2. Run the application by executing the following command:<br />
-```python pdf_snapshot.py --input_dir <path_to_directory>```
-    <br /><br />
-    Replace `<path_to_directory>` with the actual path to the directory containing your PDF files.<br />
-    <br />
-    **Note:** The application will generate a snapshot for each page of every PDF file found in the specified directory.
+* Replace `<path_to_pdfs>` with the actual path to your PDF files separated by comma.
+* Replace `<path_to_directories>` with the actual path to the directories containing 
+your PDF files separated by comma.
+* Optionally, User can also use `--dest-path` to specify a destination directory where 
+the generated snapshots must be stored. If this optional argument is not provided then
+generated snapshots will be saved in an output directory called `pdf-snapshots` which 
+is automatically created **within the source directory** of each PDF file. If user wants
+to specify a destination directory to store generated snapshots in a single place, they 
+should replace `<path_to_destination_directory>` with the actual path of the destination
+directory. 
 
-3. The generated snapshots will be saved in the output directory within the project.
+**Note:** Please put arguments of both `--input-paths` and `--dest-path` inside a 
+single/double quote.
 
+### 5.1. Example:
+
+Open the command prompt (CMD) or PowerShell, navigate to the directory where this code repository is 
+located, and execute the following command depending on your need:
+* `cd automated-Life` <br /> 
+* `python PDFSnapShot/run.py --input_dirs "C:\Document,D:\Files\Sample.PDF"`
 
 ## 6. Contributions
 Contributions to this project are welcome! If you encounter any issues or have 
@@ -129,10 +147,3 @@ suggestions for improvements, please open an issue or submit a pull request.
 Feel free to customize this README file based on your specific project details and 
 requirements. Make sure to include relevant information such as any additional setup 
 instructions or usage examples specific to your application.
-
-
-
-
-
-
-
