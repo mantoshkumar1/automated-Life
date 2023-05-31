@@ -138,7 +138,7 @@ single/double quote.
 Open the command prompt (CMD) or PowerShell, navigate to the directory where this code repository is 
 located, and execute the following command depending on your need:
 * `cd automated-Life` <br /> 
-* `python PDFSnapShot/run.py --input_dirs "C:\Document,D:\Files\Sample.PDF"`
+* `python PDFSnapShot/run.py --input-paths "C:\Document,D:\Files\Sample.PDF"`
 
 ## 6. Contributions
 Contributions to this project are welcome! If you encounter any issues or have 
