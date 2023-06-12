@@ -1,5 +1,12 @@
 # Requirements for PDFSnapShot application
 pdf2image==1.16.0
 poppler-utils; sys_platform == 'linux'
+Pillow==8.4.0  # PIL library
 
+# Requirements for ImageSizeReducer application
+# Pillow==8.4.0  # PIL library
+
+# Requirements for CompressPDF application
+PyMuPDF==1.18.14
+# pdf2image==1.16.0
 
