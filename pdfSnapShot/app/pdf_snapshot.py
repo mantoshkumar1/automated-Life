@@ -1,6 +1,9 @@
 import os
+
 import pdf2image
 from typing import List
+from PIL import Image
+from io import BytesIO
 
 from utility.logger_util.setup_logger import logger
 
@@ -35,13 +38,15 @@ class PDFSnapshotGenerator:
            of input directories as a parameter.
         2. Call the generate_snapshots method to start the generation process.
     """
-    def __init__(self, user_input: List[str], user_dest_path: str = ''):
+    def __init__(self, user_input: List[str], user_dest_path: str = '', quality=20):
         """
         :param user_input (list): A list of input directories/PDFs where the PDF files are located.
         :param user_dest_path (str): User specified optional destination directory to store generated images
+        :param quality: (int) Quality percentage of generated images
         """
         self.user_input = user_input
         self.user_dest_path: str = user_dest_path
+        self.quality = quality
 
     def generate_pdf_snapshots(self):
         """Iterate over each input directory/PDFs and generate JPEG image of each page in PDF files"""
@@ -51,7 +56,11 @@ class PDFSnapshotGenerator:
                 logger.error(f"ERROR: input path {input_path} does not exist.\n")
                 continue
 
-            if PDFSnapshotGenerator.is_file(input_path):  # PDF file
+            # if not PDF neither a directory
+            if not PDFSnapshotGenerator.is_pdf_or_directory(file_path=input_path):
+                continue
+
+            if PDFSnapshotGenerator.is_file(input_path, file_extension='.pdf'):
                 self._generate_pdf_snapshots(pdf_file_path=input_path)
             else:  # Directory
                 self._process_directory(input_directory=input_path)
@@ -117,19 +126,31 @@ class PDFSnapshotGenerator:
         return pdf2image.convert_from_path(pdf_path)
 
     @staticmethod
-    def is_file(path) -> bool:
+    def is_file(path, file_extension='.pdf') -> bool:
         """
-        Returns True if given input path represents a file; returns False for
+        Returns True if given input path represents a PDF; returns False for
         directories. Raises FileNotFoundError for Non-existent file/folder path.
         :param path: str
+        :param file_extension: str
         :return: bool
         """
         if not os.path.exists(path):
             raise FileNotFoundError
         if os.path.isfile(path):
-            return True
-        # must be directory
+            if not file_extension:
+                return True
+            if path.lower().endswith(file_extension):
+                return True
+
+        # must be directory or file with non-expected extension
         return False
+
+    @staticmethod
+    def is_pdf_or_directory(file_path):
+        """The function returns True because it's either a PDF file or a regular file.
+        Otherwise, it returns False."""
+        return os.path.isdir(file_path) or (
+                    os.path.isfile(file_path) and file_path.lower().endswith('.pdf'))
 
     def _save_images(self, image_objects: list, pdf_path: str):
         """Save each image with the file name and page number.
@@ -155,11 +176,44 @@ class PDFSnapshotGenerator:
             os.makedirs(output_directory, exist_ok=True)
             logger.info(f"SUCCESS: output directory {output_directory} created\n")
 
+        num_pages = len(image_objects)
         for i, image in enumerate(image_objects):
             # strip extension (.pdf) from filename
             src_filename_without_extension, _ = os.path.splitext(src_filename)
             dest_image_path = os.path.join(output_directory, f"{src_filename_without_extension}-page-{i + 1}.jpg")
             image.save(dest_image_path, "JPEG")
+
+            # keep each PDF page size less or equal to the original PDF file's page
+            page_size = os.path.getsize(pdf_path) // num_pages  # bytes
+            self.reduce_image_file_size(image_path=dest_image_path, target_size=page_size)
+
+    def reduce_image_file_size(self, image_path: str, target_size: int):
+        """This function reduces the file size of an image while maintaining visual
+        quality. It uses iterative JPEG compression with dynamically adjusted quality
+        levels to achieve the desired file size reduction.
+
+        @:param image_path (str): The path of the image file.
+        @:param target_size (int): The desired target size in bytes.
+        @:returns disk size of stored image in bytes
+        """
+        image = Image.open(image_path)
+
+        # Start with a high quality value
+        quality = 90
+
+        while True:
+            output_buffer = BytesIO()
+            image.save(output_buffer, format='JPEG', optimize=True, quality=quality)
+            compressed_image_data = output_buffer.getvalue()
+
+            compressed_image_size = len(compressed_image_data)
+            if compressed_image_size <= target_size or quality < self.quality:
+                with open(image_path, 'wb') as f:
+                    f.write(compressed_image_data)
+                return compressed_image_size
+
+            # Reduce the quality level
+            quality -= 10
 
 
 # # Usage example

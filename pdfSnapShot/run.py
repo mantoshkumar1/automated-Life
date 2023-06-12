@@ -1,18 +1,19 @@
 import argparse
 from typing import List
 
-from PDFSnapShot.app.pdf_snapshot import PDFSnapshotGenerator
+from pdfSnapShot.app.pdf_snapshot import PDFSnapshotGenerator
 from utility.logger_util.setup_logger import logger
 
 
-def generate_snapshots_of_pdf_pages(user_input: List[str], dest_path: str):
+def generate_snapshots_of_pdf_pages(user_input: List[str], dest_path: str, image_quality: int):
     """
     Generate JPEG snapshots of each page of the PDF files in the input directories/pdfs.
     :param user_input: (list) A list of user items.
     :param dest_path: (str) The optional destination directory to store generated images
+    :param image_quality: (int) Quality percentage of generated images
     :return:
     """
-    generator = PDFSnapshotGenerator(user_input=user_input, user_dest_path=dest_path)
+    generator = PDFSnapshotGenerator(user_input=user_input, user_dest_path=dest_path, quality=image_quality)
     generator.generate_pdf_snapshots()  # Generate snapshots from PDF pages
     logger.info("PDF snapshots generation completed.")
 
@@ -42,14 +43,16 @@ def run_app():
     parser = argparse.ArgumentParser(description="PDF Snapshot Generator")
     parser.add_argument("--input-paths", type=str, help="Paths to the input PDFs or directories separated by commas", required=True)
     parser.add_argument("--dest-path", type=str, help="Optional destination directory path to store the generated images", default='')
+    parser.add_argument("--quality", type=int, help="Optional: Enter quality reduction percentage of generated images", default=20)
     args = parser.parse_args()
 
     # Clean user-input, don't blindly trust user.
     input_paths = get_clean_user_input(user_input=args.input_paths)
     dest_path = args.dest_path.strip().replace("\n", "").replace("\r", "")
+    image_quality = args.quality
 
     # Generate the Snapshot of all PDF files
-    generate_snapshots_of_pdf_pages(user_input=input_paths, dest_path=dest_path)
+    generate_snapshots_of_pdf_pages(user_input=input_paths, dest_path=dest_path, image_quality=image_quality)
 
 
 if __name__ == "__main__":
