@@ -8,17 +8,15 @@ import traceback
 from utility.logger_util.setup_logger import logger
 
 
-class RearrageGooglePhotoBackup:
-    def __init__(self):
+class BackupGooglePhoto:
+    def __init__(self, src_dir_path_list, dest_dir_path: str):
         #
         # list all the parent directories of your video/image files.
-        self.src_dir_path_list = [
-            r"C:\Users\MANTKUMAR\Desktop\experiment\input",
-        ]
+        self.src_dir_path_list = src_dir_path_list
 
         #
         # this is where, your processed files will be stored.
-        self._dest_dir_path = r"C:\Users\MANTKUMAR\Desktop\experiment\output"
+        self._dest_dir_path = dest_dir_path
 
         #
         # This is the CSV file where all the records of the image/video images will
@@ -33,39 +31,67 @@ class RearrageGooglePhotoBackup:
         #
         # to write into file: use 'write_row_to_csv'
         # to read from this file: use 'read_row_from_from_csv'
-        self._csv_file_path = os.path.join(self._dest_dir_path, "file_copy_info.csv")
+        self._csv_file_path = os.path.join(self._dest_dir_path, "file_indices.csv")
 
         #
         # In this log file, all the failed copy/move operation are logged. This log
         # file will only record the source path of the failed copy/move operation.
-        self._failed_relocation_path_log = os.path.join(self._dest_dir_path, 'failed-relocations-paths.log')
+        self._failed_relocation_path_log = os.path.join(self._dest_dir_path, 'failed-relocation-paths.log')
 
-    def write_row_to_csv(self, source_path, dest_path, is_copied):
+    def write_row_to_csv(self, source_path, dest_path, is_rearranged):
         """Function to write copy information to CSV file"""
         # By setting newline='' when opening the file, we are telling Python to use
         # the default line terminator, which is the newline character.
-        with open(self._csv_file_path, 'w', newline='') as file:
+        with open(self._csv_file_path, 'a', newline='') as file:
             writer = csv.writer(file)
             if file.tell() == 0:
                 # Write header row if file is empty
                 writer.writerow(
-                    ["Source File Path", "Destination File Path", "Copied?"])
-            writer.writerow([source_path, dest_path, is_copied])
+                    ["Source File Path", "Destination File Path", "Rearranged?"])
+            writer.writerow([source_path, dest_path, is_rearranged])
+    #
+    # def read_row_from_from_csv(self):
+    #     """A generator function to read copy information from CSV file one row at
+    #     a time.
+    #
+    #     This CSV contains all information related to image/video files are stored. The rows of the CSV are
+    #     (source-path, destination-path, 'is-copied').
+    #     """
+    #     with open(self._csv_file_path, 'r+', newline='') as csvfile:
+    #         reader = csv.reader(csvfile)
+    #         next(reader)  # skip header row
+    #         for row in reader:
+    #             yield row
 
-    def read_row_from_from_csv(self):
-        """A generator function to read copy information from CSV file one row at
-        a time.
+    @staticmethod
+    def wait_until_file_relocation(src_file_path, dst_file_path):
+        # Get the initial size of the source file
+        src_file_size = os.path.getsize(src_file_path)
 
-        This CSV contains all information related to image/video files are stored. The rows of the CSV are
-        (source-path, destination-path, 'is-copied').
-        """
-        with open(self._csv_file_path, 'r+', newline='') as csvfile:
-            reader = csv.reader(csvfile)
-            next(reader)  # skip header row
-            for row in reader:
-                yield row
+        # Wait until the [size of the Relocated file == size of Source file]
+        while True:
+            dst_file_size = os.path.getsize(dst_file_path)
+            if dst_file_size >= src_file_size:
+                break
+            time.sleep(30)
+            percentage_completion = (dst_file_size / src_file_size) * 100
+            logger.info(f"Relocation in Progress ({percentage_completion}%): "
+                        f"{'*' * int(percentage_completion)}")
 
-    def process_csv_and_rearrange_files(self):
+    def create_backup_file(self, file_path):
+        directory = os.path.dirname(file_path)
+        file_name = os.path.basename(file_path)
+        backup_file_path = os.path.join(directory, 'backup' + file_name)
+        shutil.copy2(file_path, backup_file_path)
+        self.wait_until_file_relocation(
+            src_file_path=file_path, dst_file_path=backup_file_path)
+        return backup_file_path
+
+    def process_csv_and_rearrange_files(self, do_copy):
+
+        # Backup the original CSV file before you start working on original
+        self.create_backup_file(file_path=self._csv_file_path)
+
         # Open CSV file for reading
         with open(self._csv_file_path, 'r') as file:
             # Create CSV reader object
@@ -74,21 +100,23 @@ class RearrageGooglePhotoBackup:
             next(reader)
             # Loop through each row
             for row in reader:
-                source_path, dest_path, is_copied = row
+                source_path, dest_path, is_relocated = row
 
                 # Check if file was already copied
-                if is_copied.lower() == 'yes':
+                if is_relocated.lower() == 'yes':
                     continue
 
                 # Copy the file
                 success = self.move_or_copy_file(
-                    src_path=source_path, dest_path=dest_path, do_copy=True)
+                    src_path=source_path, dest_path=dest_path, do_copy=do_copy)
 
                 if not success:
                     continue
 
+                # import pdb;
+                # pdb.set_trace()
                 # Open CSV file for writing
-                with open(self._csv_file_path, 'w') as outfile:
+                with open(self._csv_file_path, 'a') as outfile:
                     # Create CSV writer object
                     writer = csv.writer(outfile)
 
@@ -101,7 +129,8 @@ class RearrageGooglePhotoBackup:
                     # Write modified rows to CSV
                     for r in reader:
                         if r == row:
-                            writer.writerow([source_path, dest_path, 'YES'])
+                            writer.writerow([source_path, dest_path, 'yes'])
+                            break
                         # else:
                         #     writer.writerow(r)
                         #
@@ -140,9 +169,7 @@ class RearrageGooglePhotoBackup:
     #
     #     win32file.DeviceIoControl(handle, win32file.FSCTL_UNLOCK_VOLUME, None, None)
     #     win32file.CloseHandle(handle)
-
-
-    def move_or_copy_file(self, src_path, dest_path, do_copy=True) -> bool:
+    def move_or_copy_file(self, src_path, dest_path, do_copy) -> bool:
         max_attempt = 3
         for i in range(1, max_attempt+1):
             try:
@@ -150,13 +177,19 @@ class RearrageGooglePhotoBackup:
                 # This destination may be a directory.
                 # import pdb;pdb.set_trace()
                 self.create_dir(dir_path=os.path.dirname(dest_path))
-                copy_function = shutil.copy if do_copy else shutil.move
-                copy_function(src_path, dest_path)
+                if do_copy:
+                    shutil.copy(src_path, dest_path)
+                else:
+                    shutil.move(src_path, dest_path)
+
+                self.wait_until_file_relocation(
+                    src_file_path=src_path, dst_file_path=dest_path)
+
                 return True
             except Exception as e:
                 logger.warning(f"Attempt {i}/{max_attempt}: source file={src_path} failed to {'copy' if do_copy else 'move'}")
                 logger.warning(f"Error: {traceback.format_exc()}")
-                time.sleep(5)
+                time.sleep(30)
 
         logger.error(f"source file={src_path} failed to {'copy' if do_copy else 'move'}")
         self.write_to_file(filename=self._failed_relocation_path_log, content=src_path)
@@ -200,12 +233,13 @@ class RearrageGooglePhotoBackup:
     #     return dest_file_list
 
     def is_file_image_type(self, src_file_path):
-        exclude_file_types = {'.html', '.xml', '.txt', '.json'}
+        exclude_file_types = {'.html', '.xml', '.txt', '.json', '.pdf'}
         if os.path.splitext(src_file_path)[1].lower() in exclude_file_types:
             return False
         return True
 
-    def get_src_dst_path(self, src_path, dest_dir) -> dict:
+    @staticmethod
+    def get_src_dst_path(src_path, dest_dir) -> dict:
         """Don't know at this stage, what I might return more, so returning dict.
         This way, it will not break any existing feature if something new gets added
         in the returned dict"""
@@ -213,7 +247,6 @@ class RearrageGooglePhotoBackup:
         src_file_parent_dir = os.path.dirname(src_path)
         src_file_parent_folder_name = os.path.basename(src_file_parent_dir)
         dest_dir = os.path.join(dest_dir, src_file_parent_folder_name)
-
         dest_file_path = os.path.join(dest_dir, filename)
 
         # dest_base, dest_ext = os.path.splitext(dest_file_path)
@@ -228,77 +261,82 @@ class RearrageGooglePhotoBackup:
             'dst_path': dest_file_path
         }
 
-    def traverse_directory_tree(self, src_path):
-        """Define a function to recursively traverse the directory tree"""
+    def recursive_directory_traverse_and_index(self, src_path):
+        """Define a function to recursively traverse the directory tree and build the
+        indices of source files in a CSV"""
         # Loop through all files and directories in the current directory
         for file_name in os.listdir(src_path):
             file_path = os.path.join(src_path, file_name)
             if os.path.isfile(file_path):
-                if self.is_file_image_type(src_file_path=file_path):
-                    src_dst_path_dict = self.get_src_dst_path(src_path=file_path, dest_dir=self._dest_dir_path)
-                    file_src_path, file_dst_path = src_dst_path_dict['src_path'],  src_dst_path_dict['dst_path']
+                if not self.is_file_image_type(src_file_path=file_path):
+                    logger.debug(f"skipping not-image type file: {file_path}")
+                    continue
 
-                    self.write_row_to_csv(
-                        source_path=file_src_path, dest_path=file_dst_path,
-                        # pay close attention to the value of 'is_copied', it's 'no'.
-                        # This will be written in the CSV file.
-                        is_copied='NO'
-                    )
-                logger.debug(f"skipping not-image type file: {file_path}")
+                src_dst_path_dict = self.get_src_dst_path(src_path=file_path, dest_dir=self._dest_dir_path)
+                file_src_path, file_dst_path = src_dst_path_dict['src_path'],  src_dst_path_dict['dst_path']
+
+                self.write_row_to_csv(
+                    source_path=file_src_path, dest_path=file_dst_path,
+                    # pay close attention to the value of 'is_rearranged', it's
+                    # 'no'. This will be written in the CSV file.
+                    is_rearranged='no'
+                )
 
             elif os.path.isdir(file_path):
-                # Recursively traverse the sub-directory
-                self.traverse_directory_tree(src_path=file_path)
+                # Recursively traverse the sub-directory and build indices
+                self.recursive_directory_traverse_and_index(src_path=file_path)
 
-    def reindex_csv(self):
+    def index_source_files(self):
         try:
             shutil.rmtree(path=self._dest_dir_path)
+
+            # wait until directory is deleted
+            while os.path.exists(self._dest_dir_path):
+                time.sleep(30)
+
         except Exception as e:
             logger.error(f'failed to delete target directory: '
                          f'{self._dest_dir_path}')
-            # logger.error(f'Exception: {traceback.format_exc()}')
+            logger.error(f'Exception: {traceback.format_exc()}')
+
+        self.create_dir(dir_path=self._dest_dir_path)
 
         for src_dir_path in self.src_dir_path_list:
-            self.traverse_directory_tree(src_path=src_dir_path)
+            self.recursive_directory_traverse_and_index(src_path=src_dir_path)
 
-    def get_user_input(self):
-        intentional_messing_around = 0
-        if not os.path.exists(path=self._dest_dir_path):
-            return 'y'
+    # def get_user_input(self):
+    #     intentional_messing_around = 0
+    #     if not os.path.exists(path=self._dest_dir_path):
+    #         return 'y'
+    #
+    #     while True:
+    #         print("***************************************************************")
+    #         print(f"You are going to delete the target directory: {self._dest_dir_path}.")
+    #         print("This operation is irreversible.")
+    #         print("***************************************************************")
+    #         response = input(f"Do you want to continue:? (y/n): ").lower()
+    #         if response in {'y', 'n'}:
+    #             return response
+    #
+    #         intentional_messing_around += 1
+    #         if intentional_messing_around > 3:
+    #             print("Stop, you will lose this game... It's endless darkness here. "
+    #                   "Now try again like a good boy!")
+    #         if intentional_messing_around > 10:
+    #             sys.exit("Told you, re-execute the application again!")
+    #
+    #         print("Invalid input. Please enter either 'y' or 'n'.")
 
-        while True:
-            print("***************************************************************")
-            print(f"You are going to delete the target directory: {self._dest_dir_path}.")
-            print("This operation is irreversible.")
-            print("***************************************************************")
-            response = input(f"Do you want to continue:? (y/n): ").lower()
-            if response in {'y', 'n'}:
-                return response
-
-            intentional_messing_around += 1
-            if intentional_messing_around > 3:
-                print("Stop, you will lose this game... It's endless darkness here. "
-                      "Now try again")
-            if intentional_messing_around > 10:
-                sys.exit("Now, also re-execute the application again!")
-
-            print("Invalid input. Please enter 'y' or 'n'.")
-
-    def rearrange_multimedia_resources(self):
+    def rearrange_multimedia_resources(self, do_indexing=True, do_copy=True):
         # Traverse the directory tree starting from the root directory
         # user_input = self.get_user_input()
-        user_input = 'y'
+
         self.create_dir(dir_path=self._dest_dir_path)
-        import pdb;
-        pdb.set_trace()
-        if user_input == 'y':
-            self.reindex_csv()
-
-        self.process_csv_and_rearrange_files()
+        if do_indexing:
+            self.index_source_files()
+        self.process_csv_and_rearrange_files(do_copy=do_copy)
 
 
-rearrange_Gphoto = RearrageGooglePhotoBackup()
-rearrange_Gphoto.rearrange_multimedia_resources()
 
 
 
