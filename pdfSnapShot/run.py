@@ -64,7 +64,7 @@ if __name__ == "__main__":
 # if __name__ == "__main__":
 #     # Provide the input/output directory of PDF files
 #     pdfs_source_directory_paths = [
-#         r'C:\Users\MANTKUMAR\Documents\mantosh-backup\',
+#         r'C:\Users\MANTKUMAR\Downloads\delete',
 #     ]
 #
 #     # Generate snapshots from PDF pages

@@ -9,4 +9,5 @@ Pillow==8.4.0  # PIL library
 # Requirements for CompressPDF application
 PyMuPDF==1.18.14
 # pdf2image==1.16.0
-
+fitz~=0.0.1.dev2
+pathlib~=1.0.1
