@@ -117,7 +117,7 @@ PDF file (D:\Files\File_PDF1.pdf). In this case, run this application with `--in
 and provide the Directory and PDF file paths separated by comma.
 <br />
 
-```python pdf_snapshot.py --input-paths "<path_to_pdfs>, <path_to_directories>" --dest-path "<path_to_destination_directory>"```
+```python pdfSnapShot\run.py --input-paths "<path_to_pdfs>, <path_to_directories>" --dest-path "<path_to_destination_directory>"```
 
 * Replace `<path_to_pdfs>` with the actual path to your PDF files separated by comma.
 * Replace `<path_to_directories>` with the actual path to the directories containing 
