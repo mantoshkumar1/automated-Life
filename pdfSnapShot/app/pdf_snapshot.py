@@ -6,6 +6,7 @@ from PIL import Image
 from io import BytesIO
 
 from utility.logger_util.setup_logger import logger
+from utility import pdf_functions
 
 
 class PDFSnapshotGenerator:
@@ -46,7 +47,7 @@ class PDFSnapshotGenerator:
         """
         self.user_input = user_input
         self.user_dest_path: str = user_dest_path
-        self.quality = quality
+        self.quality = int(quality)
 
     def generate_pdf_snapshots(self):
         """Iterate over each input directory/PDFs and generate JPEG image of each page in PDF files"""
@@ -57,7 +58,7 @@ class PDFSnapshotGenerator:
                 continue
 
             # if not PDF neither a directory
-            if not PDFSnapshotGenerator.is_pdf_or_directory(file_path=input_path):
+            if not pdf_functions.is_pdf_or_directory(file_path=input_path):
                 continue
 
             if PDFSnapshotGenerator.is_file(input_path, file_extension='.pdf'):
@@ -144,13 +145,6 @@ class PDFSnapshotGenerator:
 
         # must be directory or file with non-expected extension
         return False
-
-    @staticmethod
-    def is_pdf_or_directory(file_path):
-        """The function returns True because it's either a PDF file or a regular file.
-        Otherwise, it returns False."""
-        return os.path.isdir(file_path) or (
-                    os.path.isfile(file_path) and file_path.lower().endswith('.pdf'))
 
     def _save_images(self, image_objects: list, pdf_path: str):
         """Save each image with the file name and page number.

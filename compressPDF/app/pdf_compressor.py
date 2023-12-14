@@ -6,6 +6,8 @@ from typing import List
 import shutil
 
 from utility.logger_util.setup_logger import logger
+from utility import file_functions
+from utility import pdf_functions
 
 
 class PDFCompressor:
@@ -56,25 +58,49 @@ class PDFCompressor:
                 logger.error(f"ERROR: input path {input_path} does not exist.\n")
                 continue
 
-            # if not PDF neither a directory
-            if not PDFCompressor.is_pdf_or_directory(file_path=input_path):
-                continue
-
-            if PDFCompressor.is_file(input_path, file_extension='.pdf'):
+            if pdf_functions.is_pdf(file_path=input_path):
                 self.reduce_pdf_size(input_pdf_path=input_path)
-            else:  # Directory
-                self._process_directory(input_directory=input_path)
-            logger.info(f"SUCCESS: {input_path} processed.\n")
+                logger.info(f"SUCCESS: File {input_path} processed.\n")
 
-    def copy_file(self, source_file_path):
-        directory_path, file_name_with_extension = os.path.split(source_file_path)
-        if self.user_dest_dir:
-            directory_path = self.user_dest_dir
-        output_path = os.path.join(directory_path, file_name_with_extension)
-        if source_file_path != output_path:
-            shutil.copy(source_file_path, output_path)
-        print(f"Compressed file is stored in directory: {directory_path}")
+            elif file_functions.is_directory(path=input_path):  # Directory
+                self._process_directory(input_directory=input_path)
+                logger.info(f"SUCCESS: Directory {input_path} processed.\n")
+
+    def copy_pdf_file(self, source_pdf_path: str):
+        """If user has specified a path to store the compressed PDF, copy the file
+        there. Otherwise, create a directory 'compressed-pdf' in source directory of
+        PDF file and store a copy of PDF there.
+
+        :param source_pdf_path: absolute path
+        :return:
+        """
+        compressed_pdf_file_path, compressed_pdf_dir_path = \
+            self.get_unique_path_for_compressed_pdf(source_pdf_path)
+
+        file_functions.create_directory(compressed_pdf_dir_path)
+
+        shutil.copy(source_pdf_path, compressed_pdf_file_path)
+
+        print(f"Compressed file is stored in directory: {compressed_pdf_dir_path}")
         print('.' * 45)
+
+    def get_unique_path_for_compressed_pdf(self, file_path: str) -> (str, str):
+        """
+        This function finds an unique non-existing path for the newly created
+        compressed PDF file.
+
+        :param file_path: absolute file path
+        :return: (absolute path for new compressed PDF, absolute of PDF directory)
+        """
+        pdf_dest_dir = self.user_dest_dir
+        if not pdf_dest_dir:
+            pdf_dest_dir = os.path.join(file_functions.get_directory_name(file_path), 'compressed-pdf')
+
+        pdf_file_name = f'compressed_{file_functions.get_file_name(file_path)}'
+        pdf_file_path = os.path.join(pdf_dest_dir, pdf_file_name)
+        pdf_file_path = file_functions.get_unique_filepath_in_same_dir(pdf_file_path)
+
+        return pdf_file_path, pdf_dest_dir
 
     def reduce_pdf_size(self, input_pdf_path: str):
         """Generate JPEG image of each page within the PDF files
@@ -86,9 +112,10 @@ class PDFCompressor:
             logger.error(f"ERROR: PDF {input_pdf_path} does not exist")
             return
 
-        pdf_file_size = PDFCompressor.get_file_size_in_mb(input_pdf_path)
-        if pdf_file_size < self.target_pdf_size:
-            self.copy_file(input_pdf_path)
+        pdf_file_size = file_functions.get_file_size_in_mb(input_pdf_path)
+        if pdf_file_size <= self.target_pdf_size:
+            logger.debug(f"user must be kidding. Just copy his PDF.")
+            self.copy_pdf_file(input_pdf_path)
             return
 
         images = convert_from_path(input_pdf_path, dpi=150)  # Convert PDF pages to images: 96/150
@@ -114,32 +141,24 @@ class PDFCompressor:
 
                 temp_pdf_path = os.path.join(temp_dir, f'temp_{quality}.pdf')
                 writer.save(temp_pdf_path)
-                temp_pdf_file_size = self.get_file_size_in_mb(temp_pdf_path)
+
+                temp_pdf_file_size = file_functions.get_file_size_in_mb(temp_pdf_path)
 
                 if temp_pdf_file_size < self.target_pdf_size:
                     # print(f"{os.path.basename(input_pdf_path)}: Reduced to {quality}%")
-                    directory_path, file_name_with_extension = os.path.split(input_pdf_path)
-                    if self.user_dest_dir:
-                        directory_path = self.user_dest_dir
-                    output_path = os.path.join(directory_path,
-                                               f'reduced-quality-{quality}-{file_name_with_extension}')
 
-                    index = 1
-                    while os.path.isfile(output_path):
-                        index += 1
-                        output_path = os.path.join(directory_path,
-                                                   f'dup{index}-reduced-quality-{quality}-{file_name_with_extension}')
+                    # Decide where you want to save the newly generated compressed PDF
+                    compressed_pdf_file_path, compressed_pdf_dir_path = \
+                        self.get_unique_path_for_compressed_pdf(input_pdf_path)
 
-                    writer.save(output_path)
-                    print(f"File is stored in directory: {directory_path}")
+                    # create the destination directory for the compressed PDF
+                    file_functions.create_directory(compressed_pdf_dir_path)
+
+                    # save the PDF
+                    writer.save(compressed_pdf_file_path)
+                    print(f"File is stored in directory: {compressed_pdf_dir_path}")
                     print('.' * 45)
                     break
-
-    @staticmethod
-    def get_file_size_in_mb(file_path):
-        """Returns file size in MB"""
-        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-        return file_size_mb
 
     def _process_pdfs_files(self, pdf_file_paths: List[str]):
         """Process each PDF file to generate compressed PDF within specified target size in MB.
@@ -157,45 +176,11 @@ class PDFCompressor:
         input directory as well.
         :param input_directory (str): The path to the input directory.
         """
-        pdf_file_paths = self._find_pdf_files(directory=input_directory)
+        pdf_file_paths = file_functions.list_files(
+            directory=input_directory, file_extensions=['.pdf'])
+
+        list_dir = file_functions.list_directories(input_directory)
         self._process_pdfs_files(pdf_file_paths=pdf_file_paths)
 
-    @classmethod
-    def _find_pdf_files(cls, directory: str) -> list:
-        """Finds all PDF files within a given directory, including subdirectories.
-        :param directory (str): The path to the directory to search for PDF files.
-        :returns A list of paths to the PDF files found in a directory.
-        """
-        pdf_file_paths = []
-        for root, _, files in os.walk(directory): # traverses recursively top-down
-            for file in files:
-                if file.endswith('.pdf'):
-                    pdf_file_paths.append(os.path.join(root, file))
-        return pdf_file_paths
-
-    @staticmethod
-    def is_file(path, file_extension='.pdf') -> bool:
-        """
-        Returns True if given input path represents a PDF; returns False for
-        directories. Raises FileNotFoundError for Non-existent file/folder path.
-        :param path: str
-        :param file_extension: str
-        :return: bool
-        """
-        if not os.path.exists(path):
-            raise FileNotFoundError
-        if os.path.isfile(path):
-            if not file_extension:
-                return True
-            if path.lower().endswith(file_extension):
-                return True
-
-        # must be directory or file with non-expected extension
-        return False
-
-    @staticmethod
-    def is_pdf_or_directory(file_path):
-        """The function returns True because it's either a PDF file or a regular file.
-        Otherwise, it returns False."""
-        return os.path.isdir(file_path) or (
-                    os.path.isfile(file_path) and file_path.lower().endswith('.pdf'))
+        for directory in list_dir:
+            self._process_directory(directory)
