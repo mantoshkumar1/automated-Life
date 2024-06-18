@@ -1,9 +1,11 @@
 from PIL import Image
 import os
-import pathlib
 from typing import List
+import tempfile
 
 from utility.logger_util.setup_logger import logger
+from utility import file_functions
+from utility import image_functions
 
 """
 https://www.cic.gc.ca/english/helpcentre/answer.asp?qnum=1213
@@ -13,89 +15,102 @@ https://www.cic.gc.ca/english/helpcentre/answer.asp?qnum=1213
 
 
 class ImageSizeReducer:
-    def __init__(self, user_input: List[str], user_dest_path: str = ''):
+    def __init__(self, user_input: List[str], user_dest_path: str = '', reduction_quality_percentage: int = 0, target_image_size: float = 0.0):
         self.user_input = user_input
         self.user_dest_path: str = user_dest_path
 
-    def reduce_image_sizes(self):
-        """Iterate over each input directory/images and reduce the image file sizes of each image"""
+        self.reduction_quality_percentage = reduction_quality_percentage  # Quality of pic will be reduced by this %
+        self.target_image_size = target_image_size  # in bytes
+
+        # Warning: If user provides both 'reduction_quality_percentage' and
+        # 'target_image_size' then 'target_image_size' will be chosen for processing.
+        if self.target_image_size and self.reduction_quality_percentage:
+            logger.info(f"App chooses to use target_image_size={self.target_image_size} bytes")
+
+    def process_user_request(self):
+        """Iterate over each input directory/PDFs and generate compressed PDF files"""
         for input_path in self.user_input:
             input_path = input_path.strip()
             if not os.path.exists(input_path):
                 logger.error(f"ERROR: input path {input_path} does not exist.\n")
                 continue
 
-            if ImageSizeReducer.is_file(input_path):  # file
-                self._generate_pdf_snapshots(pdf_file_path=input_path)
-            else:  # Directory
+            if image_functions.is_image_file(input_path):
+                self.reduce_single_image_file_size(input_path)
+                logger.info(f"SUCCESS: File {input_path} processed.\n")
+
+            elif file_functions.is_directory(input_path):
                 self._process_directory(input_directory=input_path)
-            logger.info(f"SUCCESS: {input_path} processed.\n")
+                logger.info(f"SUCCESS: Directory {input_path} processed.\n")
 
-    @staticmethod
-    def is_file(path) -> bool:
+    def _process_directory(self, input_directory: str):
+        """Notice, it's a recursive function.
+
+        Process a single input directory by finding PDF files and then generating
+        snapshots of each PDF and subsequently processing the sub-directories of the
+        input directory as well.
+        :param input_directory (str): The path to the input directory.
         """
-        Returns True if given input path represents a file; returns False for
-        directories. Raises FileNotFoundError for Non-existent file/folder path.
-        :param path: str
-        :return: bool
+        image_file_paths = image_functions.list_image_files(input_directory)
+        for image_path in image_file_paths:
+            self.reduce_single_image_file_size(image_path)
+
+        sub_directories = file_functions.list_directories(input_directory)
+        for directory in sub_directories:
+            self._process_directory(directory)
+
+    def calculate_compress_image_size_in_bytes(self, file_path: str) -> int:
         """
-        if not os.path.exists(path):
-            raise FileNotFoundError
-        if os.path.isfile(path):
-            return True
-        # must be directory
-        return False
+        This function calculates the desired size of the target compressed file in bytes
 
-    def reduce_image_resolution(self, image_path, dpi):
-        """This function takes the path of the original image and the desired DPI as parameters. It calculates the target width and height based on the desired DPI and the current DPI of the original image. Then, it resizes the image using the resize method with Lanczos resampling for better quality. Finally, it sets the DPI metadata for the resized image and saves it with the new DPI."""
-        # Open the image using Pillow
-        image = Image.open(image_path)
+        :param file_path: absolute file path
+        :return: int
+        """
+        compress_file_size_in_byte = self.target_image_size  # bytes
 
-        # Calculate the target size based on the desired DPI
-        target_width = int(image.width * dpi / image.info['dpi'][0])
-        target_height = int(image.height * dpi / image.info['dpi'][1])
-        target_size = (target_width, target_height)
+        if not self.target_image_size:  # notice target_image_size has high priority
+            file_size_in_byte = file_functions.get_file_size_in_bytes(file_path)
+            compress_file_size_in_byte = file_size_in_byte * (
+                        1 - (self.reduction_quality_percentage / 100))
 
-        # Resize the image to the target size using Lanczos resampling for quality
-        resized_image = image.resize(target_size, resample=Image.LANCZOS)
+        return compress_file_size_in_byte
 
-        # Set the DPI metadata for the resized image
-        resized_image.info['dpi'] = (dpi, dpi)
+    def reduce_single_image_file_size(self, input_path):
 
-        # Save the resized image with the new DPI
-        resized_image.save("resized_image.jpg", dpi=(dpi, dpi))
+        # Calculate the target file size based on the reduction percentage / target size
+        target_img_size = self.calculate_compress_image_size_in_bytes(input_path)
+        file_extension, _ = file_functions.get_file_extension(input_path)
 
-# # Example usage
-# image_path = "original_image.jpg"
-# dpi = 96  # or 150
-# reduce_resolution(image_path, dpi)
-#
-#############################################################################################
+        image = Image.open(input_path)
 
-def reduce_image_file_size(input_path, reduction_percentage):
-    image = Image.open(input_path)
+        # Save the image with optimized compression at different quality levels
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for quality in range(98, 2, -2):
 
-    # Calculate the target file size based on the reduction percentage
-    target_file_size = os.path.getsize(input_path) * (1 - (reduction_percentage / 100))
+                temp_img_path = os.path.join(temp_dir, f'temp_{file_extension}')
+                image.save(temp_img_path, optimize=True, quality=quality)
 
-    # Save the image with optimized compression at different quality levels
-    for quality in range(90, 10, -10):
-        output_path = get_output_path(input_path, quality)
-        image.save(output_path, optimize=True, quality=quality)
+                temp_img_size = file_functions.get_file_size_in_bytes(temp_img_path)
+                if temp_img_size <= target_img_size:
+                    # todo: write a function to get unique name for img
+                    output_path = self.get_output_path(input_path, quality)
+                    image.save(output_path, optimize=True, quality=quality)
+                    return output_path
 
-        # Check the file size of the saved image
-        file_size = os.path.getsize(output_path)
-        if file_size <= target_file_size:
-            return output_path
-        os.remove(output_path)
+        logger.warning(f"File {input_path}: not possible to reduce quality. "
+                       f"Decrease reduction in quality")
+        return None
 
-    return None
+    def get_output_path(self, input_path, quality):
+        # todo: rewrite it as 'get_unique_path_for_compressed_pdf' is defined in file 'compressPDF/app/pdf_compressor.py'
+        dest_dir = self.user_dest_path if self.user_dest_path else \
+            file_functions.get_directory_name(input_path)
 
-def get_output_path(input_path, quality):
-    input_dir = pathlib.Path(input_path).parent
-    input_name = pathlib.Path(input_path).stem
-    output_name = f"output_{input_name}_q{quality}.jpg"
-    return str(input_dir / output_name)
+        file_name = file_functions.get_file_name(input_path)
+        file_name = f'Q{quality}_{file_name}'
+        file_path = os.path.join(dest_dir, file_name)
+        file_path = file_functions.get_unique_filepath_in_same_dir(file_path)
+        return file_path
 
 # # Example usage
 # # input_path = 'path/to/your/image.jpg'
@@ -107,3 +122,8 @@ def get_output_path(input_path, quality):
 #     print(f"Compressed image saved at: {output_path}")
 # else:
 #     print("Failed to compress image within the specified reduction percentage.")
+
+
+aa = ImageSizeReducer(user_input=[r'C:\Users\MANTKUMAR\Downloads\experiments\mk'],user_dest_path=r'C:\Users\MANTKUMAR\Downloads\experiments\output')
+import pdb;pdb.set_trace()
+aa.process_user_request()

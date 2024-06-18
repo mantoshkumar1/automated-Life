@@ -18,7 +18,54 @@ sub-folders, and uses the `pdf2image` package to convert PDF pages to JPEG image
 2. If user does not specify the destination directory path, then the output directory, `pdf-snapshots`, 
 is created automatically **within the source directory** of each PDF file.
 
-## 2. How Does This Tool Work?
+## 2. How To Use This Tool:
+
+### 2.1. Example:
+
+Open the command prompt (CMD) or PowerShell, navigate to the directory where this code repository is 
+located, and execute the following command depending on your need:
+* `cd automated-Life` <br /> 
+* `python pdfSnapShot/run.py --input-paths "C:\Document,D:\Files\Sample.PDF" --dest-path "C:\Downloads" --quality 40`
+
+### 2.2. Explanation:
+Suppose you have the following directories where your PDF files are stored:
+```text
+C:
+└── Documents
+    ├── DOC_PDF1.pdf
+    ├── DOC_PDF2.pdf
+    └── DOC_PDF3.pdf
+
+D:
+└── Files
+    ├── File_PDF1.pdf
+    └── File_PDF2.pdf
+```
+
+Now, suppose you want to use this tool on directory (C:\Document) on also on a specific 
+PDF file (D:\Files\File_PDF1.pdf). In this case, run this application with `--input-paths` 
+and provide the Directory and PDF file paths separated by comma.
+<br />
+
+```python pdfSnapShot\run.py --input-paths "<path_to_pdfs>, <path_to_directories>" --dest-path "<path_to_destination_directory>" --quality 40```
+
+* Replace `<path_to_pdfs>` with the actual path to your PDF files separated by comma.
+* Replace `<path_to_directories>` with the actual path to the directories containing 
+your PDF files separated by comma.
+* Optionally, User can also use `--dest-path` to specify a destination directory where 
+the generated snapshots must be stored. If this optional argument is not provided then
+generated snapshots will be saved in an output directory called `pdf-snapshots` which 
+is automatically created **within the source directory** of each PDF file. If user wants
+to specify a destination directory to store generated snapshots in a single place, they 
+should replace `<path_to_destination_directory>` with the actual path of the destination
+directory.
+* `--quality` is an optional argument with default value=20%. 
+
+**Note:** Please put arguments of both `--input-paths` and `--dest-path` inside a 
+single/double quote.
+
+
+## 3. How Does This Tool Work?
 The provided Python application iterates over all PDF files in a given directory and 
 captures a screenshot of each page within the PDF. 
 
@@ -49,19 +96,19 @@ in the specified directories . This can be useful for various purposes such as
 archiving, visual reference, or further analysis of the PDF content.
 
 
-## 3. Prerequisites
+## 4. Prerequisites
 * Python 3.6 or higher
 
-## 4. Installation
+## 5. Installation
 1. Clone the repository to your local machine.
 2. Navigate to the project directory.
 
-### 4.1. Setting up Dependencies
+### 5.1. Setting up Dependencies
 
 Install the Python dependencies by running the following command:<br />
 ```pip install -r requirements.txt```<br /><br />
  
-### 4.2. Issue with PDFInfoNotInstalledError (How to Resolve)
+### 5.2. Issue with PDFInfoNotInstalledError (How to Resolve)
 **Windows users might encounter the PDFInfoNotInstalledError.** In such cases, 
 please follow the instructions below:
 
@@ -95,50 +142,6 @@ For example, on Ubuntu, you can use the following command:
 
 Please note that if you are using a Linux system then this dependency is already 
 taken care of if you have already used `requirements.txt` to install dependencies.
-
-## 5. How To Use This Tool:
-### 5.1. Explanation:
-Suppose you have the following directories where your PDF files are stored:
-```text
-C:
-└── Documents
-    ├── DOC_PDF1.pdf
-    ├── DOC_PDF2.pdf
-    └── DOC_PDF3.pdf
-
-D:
-└── Files
-    ├── File_PDF1.pdf
-    └── File_PDF2.pdf
-```
-
-Now, suppose you want to use this tool on directory (C:\Document) on also on a specific 
-PDF file (D:\Files\File_PDF1.pdf). In this case, run this application with `--input-paths` 
-and provide the Directory and PDF file paths separated by comma.
-<br />
-
-```python pdfSnapShot\run.py --input-paths "<path_to_pdfs>, <path_to_directories>" --dest-path "<path_to_destination_directory>"```
-
-* Replace `<path_to_pdfs>` with the actual path to your PDF files separated by comma.
-* Replace `<path_to_directories>` with the actual path to the directories containing 
-your PDF files separated by comma.
-* Optionally, User can also use `--dest-path` to specify a destination directory where 
-the generated snapshots must be stored. If this optional argument is not provided then
-generated snapshots will be saved in an output directory called `pdf-snapshots` which 
-is automatically created **within the source directory** of each PDF file. If user wants
-to specify a destination directory to store generated snapshots in a single place, they 
-should replace `<path_to_destination_directory>` with the actual path of the destination
-directory. 
-
-**Note:** Please put arguments of both `--input-paths` and `--dest-path` inside a 
-single/double quote.
-
-### 5.1. Example:
-
-Open the command prompt (CMD) or PowerShell, navigate to the directory where this code repository is 
-located, and execute the following command depending on your need:
-* `cd automated-Life` <br /> 
-* `python PDFSnapShot/run.py --input-paths "C:\Document,D:\Files\Sample.PDF"`
 
 ## 6. Contributions
 Contributions to this project are welcome! If you encounter any issues or have 
