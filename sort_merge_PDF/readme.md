@@ -35,7 +35,7 @@ ers\MANTKUMAR\Downloads\del" --target-pdf-size 2`
 4. Verify Installation:
       * Open a new Command Prompt and type pdfinfo. If Poppler is correctly installed and in the PATH, you should see usage information for pdfinfo.
 5. Run the Script: Replace "path_to_pdf_directory" in the script with the actual path to your PDF files directory and run the script:
-   `python .\sort_merge_PDF\run.py --input-paths "C:\Users\mantkumar\Downloads\roger bill"  --target-pdf-size 2`
+   `python .\sort_merge_PDF\run.py --input-paths "C:\Users\mantkumar\Downloads\bill"  --target-pdf-size 2`
 
 ## Motivation:
 The motivation behind this project is to simplify the process of organizing and merging multiple PDF files, making it 
