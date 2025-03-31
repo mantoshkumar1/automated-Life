@@ -13,7 +13,7 @@ ers\MANTKUMAR\Downloads\del" --target-pdf-size 2`
 
 * `input-paths` is a mandatory string field. Provide the directory path that contains your PDF files. You can also specify PDF file paths. Just make sure that they are separated by comma. The whole input should be a string.
 * `dest-dir` is an optional string field. If you do not use this argument then the merged PDF file gets stored in the same directory where the original PDF is stored. The name of the reduced sized PDF will be `compressed_merged_output.pdf`.
-* `target-pdf-size` is a mandatory integer field. This argument specifies your desired size of the merged PDF in MB.
+* `target-pdf-size` is an optional integer field. This argument specifies your desired size of the merged PDF in MB. Default is `0`, which means, no compression needed.
 
 
 ## How to Setup Dependencies:
