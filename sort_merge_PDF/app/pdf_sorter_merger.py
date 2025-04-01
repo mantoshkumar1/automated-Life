@@ -43,7 +43,7 @@ class PDFSorterMerger:
         merge_pdf_dest_dir = self.user_dest_path if self.user_dest_path else pdf_dir
         merged_pdf_path = os.path.join(merge_pdf_dest_dir, "merged_output.pdf")
         merged_pdf.save(merged_pdf_path)
-        if self.target_pdf_size:
+        if self.target_pdf_size > 0:
             merge_compressed_pdf = PDFCompressor(user_input=[merged_pdf_path], user_dest_dir=merge_pdf_dest_dir, target_pdf_size=self.target_pdf_size)
             merge_compressed_pdf.process_user_request()
             os.remove(merged_pdf_path)
