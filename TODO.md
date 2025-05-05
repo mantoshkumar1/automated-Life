@@ -1,0 +1,1 @@
+1. 05 May 2025: Add a main requirement.txt that list all the requirements for all the package. Instead of doing it manually, make it such that requirmenets are automatically their each project directory as well. Is it even possible? 

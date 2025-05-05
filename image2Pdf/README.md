@@ -11,11 +11,12 @@ This application simplifies the task of organizing and sharing image files by cr
 a unified PDF file from a collection of JPEGs.
 
 ## How to Use it:
-1. Install the required dependencies: PIL (Python Imaging Library) and reportlab.
+1. In Windows, to install `reportlab` python package you first need to install Microsoft Visual C++ 14.0 or greater. Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/ (Choose the "Desktop Development with C++" option while installing).
+2. Install the required dependencies: PIL (Python Imaging Library) and reportlab.
     
     ```pip install -r image2Pdf/requirements.txt```
 
-2. Run the script with the input folder containing JPEG images and specify the output PDF file.
+3. Run the script with the input folder containing JPEG images and specify the output PDF file.
 
    ```python image2Pdf\run.py --input-path "C:\Source_Folder"  --dest-dir "C:\Dest_Folder"```
 
