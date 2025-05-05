@@ -1,2 +1,4 @@
 Pillow==8.4.0  # PIL library
+
+# In Windows, to install `reportlab` python package you first need to install Microsoft Visual C++ 14.0 or greater. Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/ (Choose the "Desktop Development with C++" option while installing).
 reportlab==3.6.1
